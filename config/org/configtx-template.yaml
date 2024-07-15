@@ -1,0 +1,120 @@
+Organizations:
+  - &Org
+    Name: OrgMSP
+    ID: OrgMSP
+    MSPDir: ./channel-msp/Organizations/org/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('OrgMSP.admin', 'OrgMSP.peer', 'OrgMSP.client')"
+      Writers:
+        Type: Signature
+        Rule: "OR('OrgMSP.admin', 'OrgMSP.client')"
+      Admins:
+        Type: Signature
+        Rule: "OR('OrgMSP.admin')"
+      Endorsement:
+        Type: Signature
+        Rule: "OR('OrgMSP.peer')"
+    AnchorPeers:
+      - Host: org-peer1.${ORG_NS}.svc.cluster.local
+        Port: 7051
+        #- Host: org-peer2.example.com
+        #Port: 7051
+    OrdererEndpoints:
+      - org-orderer.${ORG_NS}.svc.cluster.local:6050
+
+Capabilities:
+  Channel: &ChannelCapabilities
+    V2_0: true
+  Orderer: &OrdererCapabilities
+    V2_0: true
+  Application: &ApplicationCapabilities
+    V2_0: true
+
+Application: &ApplicationDefaults
+  Organizations:
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Admins"
+    LifecycleEndorsement:
+      Type: Signature
+      Rule: "OR('OrgMSP.peer')"
+    Endorsement:
+      Type: Signature
+      Rule: "OR('OrgMSP.peer')"
+
+Orderer: &OrdererDefaults
+  OrdererType: etcdraft
+  EtcdRaft:
+    Consenters:
+      - Host: org-orderer.example.com
+        Port: 6050
+        ClientTLSCert: ./channel-msp/Organizations/org/orderers/org-orderer/tls/signcerts/tls-cert.pem
+        ServerTLSCert: ./channel-msp/Organizations/org/orderers/org-orderer/tls/signcerts/tls-cert.pem
+    Options:
+      TickInterval: 500ms
+      ElectionTick: 10
+      HeartbeatTick: 1
+      MaxInflightBlocks: 5
+      SnapshotIntervalSize: 20 MB
+  BatchTimeout: 2s
+  BatchSize:
+    MaxMessageCount: 10
+    AbsoluteMaxBytes: 99 MB
+    PreferredMaxBytes: 512 KB
+  Organizations:
+    - *Org
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Admins"
+    BlockValidation:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+  Capabilities:
+    <<: *OrdererCapabilities
+
+Channel: &ChannelDefaults
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Admins"
+  Capabilities:
+    <<: *ChannelCapabilities
+
+Profiles:
+  OneOrgApplicationGenesis:
+    <<: *ChannelDefaults
+    Orderer:
+      <<: *OrdererDefaults
+      Organizations:
+        - *Org
+      Capabilities:
+        <<: *OrdererCapabilities
+    Application:
+      <<: *ApplicationDefaults
+      Organizations:
+        - *Org
+      Capabilities:
+        <<: *ApplicationCapabilities
+
